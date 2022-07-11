@@ -1,0 +1,2 @@
+# fastcrud-common
+Fastcrud utilities
