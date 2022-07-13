@@ -1,0 +1,45 @@
+{% extends "index.html" %}
+{% block body %}
+    <div class="wrapper">
+        {% block sidebar %}
+            <aside class="navbar navbar-vertical navbar-expand-md navbar-dark elevation-4">
+                <div class="container-fluid">
+                    <h1 class="navbar-brand navbar-brand-autodark">
+                        <a class="brand-link" href="{{ admin_url()}}">
+                        <span class="brand-text font-weight-bold">{{ admin_title }}</span
+                        >
+                    </a>
+                </h1>
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <nav class="mt-2">
+                        <ul class="navbar-nav pt-lg-3">
+                            {% for _m in all_models %}
+                                <li class="nav-item">
+                                    <a class="nav-link {% if _m.identity() == model.identity() %}active fw-bold{% endif %}"
+                                       href="{{ admin_url_for(_m) }}">
+                                        <span class="nav-link-title">{{ _m.get_name() }}</span>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </aside>
+    {% endblock %}
+    <div class="page-wrapper">
+        <div class="container-fluid">
+            <div class="page-header d-print-none">
+                {% block header %}{% endblock %}
+            </div>
+        </div>
+        <div class="page-body flex-grow-1">
+            <div class="container-fluid">
+                <div class="row row-deck row-cards">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

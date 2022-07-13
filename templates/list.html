@@ -1,0 +1,601 @@
+{% extends "layout.html" %}
+{% block header %}
+    <div class="d-flex justify-content-between align-items-center">
+        <h1>{{ model.get_name() }}</h1>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ admin_url()}}">Admin</a>
+            </li>
+            <li class="breadcrumb-item active">{{ model.get_name() }}</li>
+        </ol>
+    </div>
+{% endblock %}
+{% block modal %}
+    <div class="modal modal-blur fade"
+         id="modal-loading"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <span class="ms-2">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modal-blur fade"
+         id="modal-error"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                <div class="modal-status bg-danger"></div>
+                <div class="modal-body text-center py-4">
+                    <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon mb-2 text-danger icon-lg"
+                         width="24"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         stroke-width="2"
+                         stroke="currentColor"
+                         fill="none"
+                         stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 9v2m0 4v.01" />
+                        <path
+                        d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"
+                        />
+                    </svg>
+                    <h3>Something went wrong!</h3>
+                    <div id="error-body" class="text-muted"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modal-blur fade"
+         id="modal-delete"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                <div class="modal-status bg-danger"></div>
+                <div class="modal-body text-center py-4">
+                    <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon mb-2 text-danger icon-lg"
+                         width="24"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         stroke-width="2"
+                         stroke="currentColor"
+                         fill="none"
+                         stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 9v2m0 4v.01" />
+                        <path
+                        d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"
+                        />
+                    </svg>
+                    <h3>Are you sure?</h3>
+                    <div id="modal-delete-body" class="text-muted">
+                        Do you really want to remove <span></span> ? This action cannot be
+                        undone.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="w-100">
+                        <div class="row">
+                            <div class="col">
+                                <a href="#" class="btn w-100" data-bs-dismiss="modal">Cancel</a>
+                            </div>
+                            <div class="col">
+                                <div id="modal-delete-btn" href="#" class="btn btn-danger w-100">Delete</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="container-fluid">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div id="dt_wrapper"></div>
+                                <div class="d-flex">
+                                    <button id="multi-delete-btn"
+                                            class="btn btn-danger btn-block me-2"
+                                            style="display: none">
+                                        <i class="fa-solid fa-trash me-2"></i>
+                                        (<span>0</span>)
+                                    </button>
+                                    <a href="{{ admin_url_for(model, 'create')}}"
+                                       class="btn btn-primary btn-block">
+                                        <i class="fa-solid fa-plus me-2"></i>
+                                        New {{ entity_name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="dt" class="table table-bordered table-vcenter text-nowrap">
+                            <thead class="thead-light">
+                                <tr id="table-header">
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block link %}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs5/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/cr-1.5.6/date-1.1.2/r-2.3.0/sb-1.3.4/sl-1.4.0/datatables.min.css"/>
+{% endblock %}
+{% block script %}
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs5/jszip-2.5.0/dt-1.12.1/b-2.2.3/b-colvis-2.2.3/b-html5-2.2.3/b-print-2.2.3/cr-1.5.6/date-1.1.2/r-2.3.0/sb-1.3.4/sl-1.4.0/datatables.min.js"></script>
+{% endblock %}
+{% block script_end %}
+    <script>
+  function get_file_icon(mimeType) {
+    mapping = {
+      image: "fa-file-image",
+      audio: "fa-file-audio",
+      video: "fa-file-video",
+      "application/pdf": "fa-file-pdf",
+      "application/msword": "fa-file-word",
+      "application/vnd.ms-word": "fa-file-word",
+      "application/vnd.oasis.opendocument.text": "fa-file-word",
+      "application/vnd.openxmlformatsfficedocument.wordprocessingml":
+        "fa-file-word",
+      "application/vnd.ms-excel": "fa-file-excel",
+      "application/vnd.openxmlformatsfficedocument.spreadsheetml":
+        "fa-file-excel",
+      "application/vnd.oasis.opendocument.spreadsheet": "fa-file-excel",
+      "application/vnd.ms-powerpoint": "fa-file-powerpoint",
+      "application/vnd.openxmlformatsfficedocument.presentationml":
+        "fa-file-powerpoint",
+      "application/vnd.oasis.opendocument.presentation": "fa-file-powerpoint",
+      "text/plain": "fa-file-text",
+      "text/html": "fa-file-code",
+      "text/csv": "fa-file-csv",
+      "application/json": "fa-file-code",
+      "application/gzip": "fa-file-archive",
+      "application/zip": "fa-file-archive",
+    };
+
+    for (var key in mapping) {
+      if (mimeType.search(key) === 0) {
+        return mapping[key];
+      }
+    }
+    return "fa-file";
+  }
+  function null_column() {
+    return '<span class="text-center text-muted"> {{"<null>"}} </span>';
+  }
+  function empty_column() {
+    return '<span class="text-center text-muted"> {{"<empty>"}} </span>';
+  }
+  function pretty_print_json(data) {
+    var jsonLine = /^( *)("[\w]+": )?("[^"]*"|[\w.+-]*)?([,[{])?$/gm;
+    var replacer = function (match, pIndent, pKey, pVal, pEnd) {
+      var key = '<span class="json-key" style="color: brown">',
+        val = '<span class="json-value" style="color: navy">',
+        str = '<span class="json-string" style="color: olive">',
+        r = pIndent || "";
+      if (pKey) r = r + key + pKey.replace(/[": ]/g, "") + "</span>: ";
+      if (pVal) r = r + (pVal[0] == '"' ? str : val) + pVal + "</span>";
+      return r + (pEnd || "");
+    };
+
+    return JSON.stringify(data, null, 3)
+      .replace(/&/g, "&amp;")
+      .replace(/\\"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(jsonLine, replacer);
+  }
+  function get_columns() {
+    var columns = [];
+    columns.push({
+      data: null,
+      orderable: false,
+      render: function (data, type, full, meta) {
+        return `<input data-id="${full.id}" class="form-check-input" type="checkbox">`;
+      }
+    })
+    columns.push({
+      data: null,
+      orderable: false,
+      render: function (data, type, full, meta) {
+        // return '<a href="#"><i class="fa-solid fa-eye"></i></a>'
+        return `
+        <div class="d-flex">
+        <a href="{{ admin_url_for(model, 'show')}}&id=${full.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View">
+                <span class="me-1"><i class="fa-solid fa-eye"></i></span>
+          </a>
+          <a href="{{ admin_url_for(model, 'edit') }}&id=${full.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
+                <span class="me-1"><i class="fa-solid fa-edit"></i></span>
+          </a><div>
+        `;
+      },
+    });
+    {%set columns= model.dict() %}
+    {% for key in columns if not columns[key].exclude_from_list%}
+    {%set item = columns[key] %}
+    {%if item.type == "image"%}
+    columns.push({
+          data: "{{key}}",
+          render: function (data, type, full, meta) {
+            if (data) {
+              if (!Array.isArray(data)) data = [data];
+              cols = "";
+              if(data.length == 0 ) return empty_column();
+              data.forEach((e) => {
+                cols += `<div class="p-1"><img style="width: 3em;height:3em;object-fit: cover;"  src="{{request.base_url}}medias/${e.path}" class="img-fluid rounded" alt="${e.filename}"></div>`;
+              });
+              return `<div class="d-flex" style="min-width: ${ 4 * data.length }em;">${cols}</div>`;
+            } else return null_column();
+          },
+        });
+    {%elif item.type == "file"%}
+    columns.push({
+          data: "{{key}}",
+          render: function (data, type, full, meta) {
+            if (data) {
+              if (!Array.isArray(data)) data = [data];
+              cols = "";
+              if(data.length == 0 ) return empty_column();
+              data.forEach((e) => {
+                cols += `<a href="{{request.base_url}}medias/${ e.path }" class="btn-link">
+                  <i class="fa-solid fa-fw ${get_file_icon( e.content_type )}"></i><span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title="${e.filename}" style="max-width: 150px;">${e.filename}</span></a>`;
+              });
+              return `<div class="d-flex flex-column">${cols}</div>`;
+            } else return null_column();
+          },
+        });
+    {%elif item.type == "json"%}
+    columns.push({
+          data: "{{key}}",
+          render: function (data, type, full, meta) {
+            if (data) {
+              return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+                data
+              )}</span>`;
+            } else return null_column();
+          },
+        });
+    {%elif item.type in ("datetime", "date", "time")%}
+    columns.push({
+          data: "{{key}}",
+          searchBuilderType: "{{'moment-MMM DD, YYYY hh:mm A' if (item.type == 'datetime') else( 'moment-LL' if (item.type == 'date') else 'moment-LTS' )}}",
+          render: function (data, type, full, meta) {
+            if (data) {
+              if (Array.isArray(data)) {
+              if(data.length == 0 ) return empty_column();
+                data = data.map((e) => moment(e).format("{{'LLLL' if (item.type == 'datetime') else( 'LL' if (item.type == 'date') else 'LTS' )}}"));
+                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+                  data
+                )}</span>`;
+              } else {
+                data = moment(data).format("{{'LLLL' if (item.type == 'datetime') else( 'LL' if (item.type == 'date') else 'LTS' )}}");
+                return `<span>${data}</span>`;
+              }
+            } else return null_column();
+          },
+        });
+    {%elif item.type == "bool"%}
+    columns.push({
+          data: "{{key}}",
+          searchBuilderType: "{{item.type}}",
+          render: function (data, type, full, meta) {
+            if (data == null) return null_column();
+            else {
+              if (!Array.isArray(data)) {
+                data = [data];
+              }
+              cols = "";
+              if(data.length == 0 ) return empty_column();
+              data.forEach((e) => {
+                if (e)
+                  cols += `<span class="text-center text-success me-1">
+                                    <i class="fa-solid fa-check-circle fa-lg"></i>
+                                </span>`;
+                else
+                  cols += `<span class="text-center text-danger me-1">
+                                    <i class="fa-solid fa-times-circle fa-lg"></i>
+                                  </span>`;
+              });
+              return `<div class="d-flex flex-row">${cols}</div>`;
+            }
+          },
+        });
+    {%elif item.type == "relation"%}
+    columns.push({
+          data: "{{key}}",
+          orderable: false,
+          render: function (data, type, full, meta) {
+            if (data) {
+              if(Array.isArray(data)){
+                  if(data.length == 0 ) return empty_column();
+                  cols = "";
+                  data.forEach((e) => {
+                      cols += `<a class='mx-1 btn-link' href="{{ admin_url_for(item.identity | to_model, 'show') }}&id=${e.id}"><span class='avatar rounded-circle'>${e.id}</span></a>`;
+                });
+                return `<div class="d-flex flex-row">${cols}</div>`;
+              }
+              return `<a class='btn-link' href="{{ admin_url_for(item.identity | to_model, 'show') }}&id=${data.id}"><span class='avatar rounded-circle'>${data.id}</span></a>`;
+            } else return null_column();
+          },
+        });
+    {%else%}
+    columns.push({
+          data: "{{key}}",
+          render: function (data, type, full, meta) {
+            if (data) {
+              if (Array.isArray(data)) {
+                if(data.length == 0 ) return empty_column();
+                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+                  data
+                )}</span>`;
+              } else return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${data}' style="max-width: 150px;">${data}</span>`;
+            } else return null_column();
+          },
+        });
+    {%endif%}
+    {%endfor%}
+    $("#table-header").append('<th></th><th></th>{%for key in columns if not columns[key].exclude_from_list%}<th>{{key}}</th>{%endfor%} ');
+    return columns;
+  }
+  $(function () {
+    var table = $("#dt").DataTable({
+      dom: "PlBfrtip",
+      paging: true,
+      lengthChange: true,
+      searching: false,
+      info: true,
+      colReorder: true,
+      //responsive: true,
+      serverSide: true,
+      scrollX: true,
+      lengthMenu: [
+        [5, 10, 25, 50, 100, -1],
+        [5, 10, 25, 50, 100, "All"],
+      ],
+      pagingType: "full_numbers",
+      pageLength: 10,
+      select: {
+            style:    'multi',
+            selector: 'td:first-child .form-check-input',
+            className: ''
+        },
+      buttons: [
+        {
+          extend: "csv",
+          text: '<i class="fa-solid fa-file-csv"></i> CSV',
+          exportOptions: {
+            columns: {{model._export_columns()}}
+          }
+        },
+        {
+          extend: "excel",
+          text: '<i class="fa-solid fa-file-excel"></i> Excel',
+          exportOptions: {
+            columns: {{model._export_columns()}}
+          }
+        },
+        {
+          extend: "pdf",
+          text: '<i class="fa-solid fa-file-pdf"></i> PDF',
+          exportOptions: {
+            columns:{{model._export_columns()}}
+          }
+        },
+        {
+          extend: "print",
+          text: '<i class="fa-solid fa-print"></i> Print',
+          exportOptions: {
+            columns: {{model._export_columns()}}
+          }
+        },
+        {
+          extend: "colvis",
+          text: 'Column visibility <i class="fa-solid fa-caret-down"></i>',
+        },
+        {
+          extend: "searchBuilder",
+          text: '<i class="fa-solid fa-filter"></i> Filter',
+          config: {
+            columns: JSON.parse("{{model.search_columns().keys() | list}}"),
+            // enterSearch: true,
+            greyscale: true,
+          },
+        },
+      ],
+      language: {
+        info: "Showing <strong>_START_</strong> to <strong>_END_</strong> off <strong>_TOTAL_</strong> records",
+        infoEmpty: "No records available",
+        infoFiltered: "",
+        searchBuilder: {
+          title: "",
+          data: "Select Column",
+          button: {
+            _: '<i class="fa-solid fa-filter"></i> Filter (%d)',
+          },
+        },
+      },
+      ajax: function (data, callback, settings) {
+        console.log(data);
+        order = [];
+        data.order.forEach((o) => {
+          const { column, dir } = o;
+          order.push(`${data.columns[column].data} ${dir}`);
+        });
+        where = {};
+        extractCriteria = function (c) {
+          var d = {};
+          if ((c.logic && c.logic == "OR") || c.logic == "AND") {
+            d[c.logic.toLowerCase()] = [];
+            c.criteria.forEach((v) => {
+              d[c.logic.toLowerCase()].push(extractCriteria(v));
+            });
+          } else {
+            if (c.type.startsWith("moment-")) {
+              format = c.type.substring(7);
+              if (format == "ll") format = "YYYY-MM-DD";
+              else if (format == "LTS") format = "HH:mm:ss";
+              else format = moment.defaultFormat;
+              c.value = [];
+              if (c.value1) {
+                c.value1 = moment(c.value1).format(format);
+                c.value.push(c.value1);
+              }
+              if (c.value2) {
+                c.value2 = moment(c.value2).format(format);
+                c.value.push(c.value2);
+              }
+            }
+            cnd = {};
+            c_map = {
+              "=": "eq",
+              ">": "gt",
+              ">=": "ge",
+              "<": "lt",
+              "<=": "le",
+              contains: "contains",
+              starts: "startsWith",
+              ends: "endsWith",
+            };
+            if (c.condition == "between") {
+              cnd["between"] = c.value;
+            } else if (c.condition == "!starts") {
+              cnd["not_like"] = `%${c.value1}`;
+            } else if (c.condition == "!ends") {
+              cnd["not_like"] = `${c.value1}%`;
+            } else if (c.condition == "!contains") {
+              cnd["not_like"] = `%${c.value1}%`;
+            } else if (c.condition == "null") {
+              cnd["is"] = null;
+            } else if (c_map[c.condition]) {
+              cnd[c_map[c.condition]] = c.value1;
+            }
+            d[c.data] = cnd;
+          }
+          return d;
+        };
+        if (data.searchBuilder && !jQuery.isEmptyObject(data.searchBuilder)) {
+          where = extractCriteria(data.searchBuilder);
+          console.log(where);
+        }
+        $.ajax({
+          url: "{{ url_for(model.datasource())}}",
+          type: "get",
+          data: {
+            skip: settings._iDisplayStart,
+            limit: settings._iDisplayLength,
+            where: JSON.stringify(where),
+            order_by: order,
+          },
+          traditional: true,
+          dataType: "json",
+          success: function (data, status, xhr) {
+            total = data.total;
+            data = data.items;
+            data.forEach((d) => {
+              d.DT_RowId = d.id;
+            });
+            callback({
+              recordsFiltered:total,
+              data: data,
+            });
+          },
+        });
+      },
+      initComplete: function () {
+        // $('.dt-down-arrow').hide();
+      },
+      //columnDefs: {column_defs | safe } [{ width: "100px", targets: 3 }],
+      columns: get_columns(),
+      order: [[2, "asc"]],
+    });
+    table.buttons().container().appendTo("#dt_wrapper");
+
+    $('[data-toggle="tooltip"]').tooltip()
+
+    table
+        .on( 'select', function ( e, dt, type, indexes ) {
+            var rowData = table.rows( indexes ).data().toArray();
+            console.log('select',table.rows( { selected: true } ).ids().toArray());
+            if(table.rows( { selected: true } ).count() == 0)
+            $('#multi-delete-btn').hide()
+            else
+            $('#multi-delete-btn').show()
+            $('#multi-delete-btn span').text(table.rows( { selected: true } ).count())
+        } )
+        .on( 'deselect', function ( e, dt, type, indexes ) {
+            var rowData = table.rows( indexes ).data().toArray();
+            console.log('deselect '+table.rows( { selected: true } ).ids().toArray());
+            if(table.rows( { selected: true } ).count() == 0)
+            $('#multi-delete-btn').hide()
+            else
+            $('#multi-delete-btn').show()
+            $('#multi-delete-btn span').text(table.rows( { selected: true } ).count())
+        } );
+
+      $("#modal-delete-btn").click(function(){
+        $("#modal-delete").modal('hide');
+        $("#modal-loading").modal('show');
+        var where = JSON.stringify({id: { in: table.rows( { selected: true } ).ids().toArray()}})
+        fetch(`{{ url_for(model.datasource())}}?where=${where}`, {
+                    method: "DELETE"
+                }).then(async response=>{
+                  if(response.ok){
+                    await new Promise(r => setTimeout(r, 500));
+                  $("#modal-loading").modal('hide')
+                    table.ajax.reload();
+                    $('#multi-delete-btn').hide()
+                    }
+                  else
+                    return Promise.reject();
+
+                }).catch(async (error) => {
+                    await new Promise(r => setTimeout(r, 500));
+                  $("#modal-loading").modal('hide')
+                    $("#modal-error").modal('show');
+                });
+      })
+
+      $("#multi-delete-btn").click(function(){
+        $("#modal-delete-body span").text(table.rows( { selected: true } ).count()+" {{model.get_name()}}");
+        $("#modal-delete").modal('show');
+      })
+  });
+    </script>
+{% endblock %}

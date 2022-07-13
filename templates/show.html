@@ -1,0 +1,241 @@
+{% extends "layout.html" %}
+{% block header %}
+    <div class="d-flex justify-content-between  align-items-center">
+        <h1>{{ model.get_name() }}</h1>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ admin_url()}}">Admin</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{{ admin_url_for(model) }}">{{ model.get_name() }}</a>
+            </li>
+            <li class="breadcrumb-item active">Detail</li>
+        </ol>
+    </div>
+{% endblock %}
+{% block modal %}
+    <div class="modal modal-blur fade"
+         id="modal-loading"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <span class="ms-2">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modal-blur fade"
+         id="modal-error"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                <div class="modal-status bg-danger"></div>
+                <div class="modal-body text-center py-4">
+                    <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon mb-2 text-danger icon-lg"
+                         width="24"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         stroke-width="2"
+                         stroke="currentColor"
+                         fill="none"
+                         stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 9v2m0 4v.01" />
+                        <path
+                        d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"
+                        />
+                    </svg>
+                    <h3>Something went wrong!</h3>
+                    <div id="error-body" class="text-muted"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modal-blur fade"
+         id="modal-delete"
+         tabindex="-1"
+         role="dialog"
+         aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                <div class="modal-status bg-danger"></div>
+                <div class="modal-body text-center py-4">
+                    <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="icon mb-2 text-danger icon-lg"
+                         width="24"
+                         height="24"
+                         viewBox="0 0 24 24"
+                         stroke-width="2"
+                         stroke="currentColor"
+                         fill="none"
+                         stroke-linecap="round"
+                         stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 9v2m0 4v.01" />
+                        <path
+                        d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"
+                        />
+                    </svg>
+                    <h3>Are you sure?</h3>
+                    <div id="modal-delete-body" class="text-muted">This action cannot be undone.</div>
+                </div>
+                <div class="modal-footer">
+                    <div class="w-100">
+                        <div class="row">
+                            <div class="col">
+                                <a href="#" class="btn w-100" data-bs-dismiss="modal">Cancel</a>
+                            </div>
+                            <div class="col">
+                                <div id="modal-delete-btn" href="#" class="btn btn-danger w-100">Delete</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="container-fluid">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 class="card-title">
+                                    ID: <strong>{{ value.id }}</strong>
+                                </h3>
+                                <div class="d-flex">
+                                    <a href="{{ admin_url_for(model, 'edit')}}&id={{ value.id }}">
+                                        <button type="button" class="btn btn-primary btn-block me-2">
+                                            <i class="fa-solid fa-edit me-2"></i>
+                                            Edit
+                                        </button>
+                                    </a>
+                                    <button id="delete-btn"
+                                            type="button"
+                                            class="btn btn-danger btn-block"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modal-delete">
+                                        <i class="fas fa-trash-alt me-2"></i>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% set columns= model.dict() %}
+                        {% for key in columns if not columns[key].exclude_from_view %}
+                            {% set item = value[key] %}
+                            <div>
+                                <strong>{{ key | title }}</strong>
+                            </div>
+                            {% if value[key] == None %}
+                                <p class="text-muted">
+                                    {{"<null>" }}
+                                </p>
+                            {% elif columns[key].type == "image" %}
+                                {% if not columns[key].is_array %}
+                                    {% set item = [item] %}
+                                {% endif %}
+                                <div class="d-flex">
+                                    {% for image in item %}
+                                        <div class="mx-1 my-2">
+                                            <img style="width: 5em;
+                                                        height:5em;
+                                                        object-fit: cover;"
+                                                 src="{{ request.base_url }}medias/{{ image.path }}"
+                                                 class="img-fluid rounded me-3 d-block"
+                                                 alt="{{ image.filename }}">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% elif columns[key].type == "file" %}
+                                {% if not columns[key].is_array %}
+                                    {% set item = [item] %}
+                                {% endif %}
+                                <div class="d-flex flex-column">
+                                    {% for file in item %}
+                                        <a href="{{ request.base_url }}medias/{{ file.path }}" class="btn-link"><i class="fas fa-fw {{ file.content_type | file_icon }}"></i>
+                                    {{ file.filename }}</a>
+                                {% endfor %}
+                            </div>
+                        {% elif columns[key].type == 'relation' %}
+                            {% if not columns[key].many %}
+                                {% set item = [item] %}
+                            {% endif %}
+                            {% if item | length == 0 %}
+                                <p class="text-muted">
+                                    {{"<empty>" }}
+                                </p>
+                            {% else %}
+                                <div class="d-flex flex-row">
+                                    {% for v in item %}
+                                        <a class='m-1 btn-link'
+                                           href="{{ admin_url_for(columns[key].identity | to_model, 'show')}}&id={{ v.id }}"
+                                           class="text-nowrap"><span class='avatar rounded-circle'>{{ v.id }}</span></a>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% elif columns[key].is_array %}
+                            <ul>
+                                {% for v in item %}<li>{{v }}</li>{% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="">{{ item.type }} {{ value[key] }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block script_end %}
+    <script>
+$(function(){
+    $("#modal-delete-btn").click(function(){
+        $("#modal-delete").modal('hide');
+        $("#modal-loading").modal('show');
+        fetch(`{{ url_for(model.datasource()) | safe}}?where[id]={{value.id}}`, {
+            method: "DELETE"
+        }).then(async response=>{
+            if(response.ok){
+            await new Promise(r => setTimeout(r, 500));
+                $("#modal-loading").modal('hide')
+                window.location.replace("{{ admin_url_for(model)  | safe}}")
+            }
+            else
+                return Promise.reject();
+
+        }).catch(async (error) => {
+            await new Promise(r => setTimeout(r, 500));
+            $("#modal-loading").modal('hide')
+            $("#modal-error").modal('show');
+        });
+    });
+})
+    </script>
+{% endblock %}

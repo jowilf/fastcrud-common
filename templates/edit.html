@@ -1,0 +1,426 @@
+{% extends "layout.html" %} 
+{%set columns= model.dict() %}
+{% block header %}
+<div class="d-flex justify-content-between align-items-center">
+  <h1>{{ model.get_name() }}</h1>
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{{admin_url()}}">Admin</a>
+    </li>
+    <li class="breadcrumb-item">
+      <a href="{{ admin_url_for(model)}}">{{ model.get_name() }}</a>
+    </li>
+    <li class="breadcrumb-item active">Edit</li>
+  </ol>
+</div>
+{% endblock%} {% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <form>
+          <div class="card-header">
+            <div class="container-fluid">
+              <div class="d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Edit {{ model.get_name() }}</h3>
+              </div>
+            </div>
+          </div>
+          <div class="card-body border-bottom py-3">
+            {%for key in columns if not columns[key].exclude_from_form %} 
+            {%set item = columns[key] %}
+
+            <div class="mb-3">
+              <label class="form-label" for="{{key}}">{{key|title}}</label>
+              {%if item.type == "string" and item.multiline%}
+              <textarea
+                id="{{key}}"
+                name="{{key}}"
+                class="form-control"
+                name="example-textarea-input"
+                rows="6"
+                placeholder="{{key | title}}..."
+              >{{value[key]}}</textarea>
+              {%elif item.type == "string" and item.is_array%}
+              <select
+                id="{{key}}"
+                name="{{key}}"
+                class="form-control form-select"
+                data-tags="true"
+                multiple="multiple"
+              > {% if value[key] %}
+                {% for val in value[key]%}
+                <option selected="selected">{{val}}</option>
+                {%endfor%}
+                {%endif%}
+              </select>
+              {%elif item.type == "string" and item.enum%}
+              <select id="{{key}}" name="{{key}}"  class="form-control form-select">
+                {%for enum_item in item['values']%}
+                <option value="{{enum_item}}"{{'selected="selected"' if value[key]==enum_item else ''}}>{{enum_item}}</option>
+                {%endfor%}
+              </select>
+              {%elif item.phone%}
+              <input
+                id="{{key}}"
+                name="{{key}}"
+                type="tel"
+                class="form-control"
+                placeholder="{{key | title}}"
+                autocomplete="off"
+                value="{{value[key]}}"
+                {%if
+                item.required%}required{%endif%}
+              />
+              {%elif item.email%}
+              <input
+                id="{{key}}"
+                type="email"
+                class="form-control"
+                placeholder="{{key | title}}"
+                value="{{value[key]}}"
+                {%if
+                item.required%}required{%endif%}
+              />
+              {%elif item.type == "string"%}
+              <input
+                id="{{key}}"
+                name="{{key}}"
+                type="text"
+                class="form-control"
+                placeholder="{{key | title}}"
+                value="{{value[key]}}"
+                {%if
+                item.required%}required{%endif%}
+              />
+              {%elif item.type == "num"%}
+              <input
+                id="{{key}}"
+                name="{{key}}"
+                type="number"
+                class="form-control"
+                placeholder="{{key | title}}"
+                value="{{value[key]}}"
+                {%if
+                item.required%}required{%endif%}
+              />
+              {%elif item.type == "bool"%}
+              <label class="form-check form-switch">
+                <input id="{{key}}" name="{{key}}" class="form-check-input" type="checkbox" {{'checked' if value[key] else ''}} />
+              </label>
+              {%elif item.type == "json"%}
+              <div
+                id="{{key}}"
+                name="{{key}}"
+                class="form-control"
+                style="height: 400px"
+              ></div>
+              {%elif item.type in ("image","file")%}
+               <input type="file"
+              class="form-control" id="{{key}}" name="{{key}}"  {%if item.is_array%} multiple
+              {%endif%} {% if item.type=="image" %} accept="image/*" {%endif%}
+              {%if item.required%}required{%endif%}>
+              <label class="form-check mt-1">
+                <input id="_keep_old_{{key}}" class="form-check-input" type="checkbox" checked>
+                <span class="form-check-label">Keep old {{key}}</span>
+              </label>
+              {%elif item.type in ("datetime","date","time")%} <input
+              type="{{"datetime-local" if item.type =="datetime" else
+              item.type}}" class="form-control" id="{{key}}" name="{{key}}"  value="{{value[key]}}" />
+              {%elif item.type == "relation"%}
+              <select data-allow-clear="true" data-placeholder="Select a {{key}}" id="{{key}}" name="{{key}}"  class="form-control form-select" {{'multiple' if item.many else ''}}>
+              </select>
+              {%endif%}
+              <div class="invalid-feedback" id="{{key}}-error" style="display: none;"></div>
+            </div>
+            {%endfor%}
+          </div>
+          <div class="card-footer text-end">
+            <div class="d-flex">
+              <a
+                href="{{ admin_url_for(model)}}"
+                class="btn btn-link"
+                >Cancel</a
+              >
+              <button type="submit" class="btn btn-primary ms-auto">
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock%} {%block link%}
+
+<link
+  href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+  rel="stylesheet"
+/>
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.7.4/jsoneditor.min.css"
+  integrity="sha512-LDaPaKECzpambd6J0xPGx2s/z8EA1rAm3JzmoMgKO0VTRbXHTeE54oDLRw26eFiyBZ3Cf888tBEHzeUTYA3ddw=="
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+/>
+
+{%endblock%} {%block script%}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.7.4/jsoneditor.min.js"
+  integrity="sha512-KQaWlVsZF0iPXCR8p176hVrg/rlw+smy8dpJ+vwiuvoHyGr8PTVvaAV4ZmsAYdCvMRP8e3sB9pl1mRuaunaXrg=="
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+></script>
+{%endblock%} {%block modal%}
+<div
+  class="modal modal-blur fade"
+  id="modal-loading"
+  tabindex="-1"
+  role="dialog"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border text-primary" role="status"></div>
+          <span class="ms-2">Loading...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div
+  class="modal modal-blur fade"
+  id="modal-error"
+  tabindex="-1"
+  role="dialog"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="modal"
+        aria-label="Close"
+      ></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="icon mb-2 text-danger icon-lg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+          <path d="M12 9v2m0 4v.01" />
+          <path
+            d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"
+          />
+        </svg>
+        <h3>Something went wrong!</h3>
+        <div id="error-body" class="text-muted"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{%endblock%} {%block script_end%}
+<script>
+    $(function () {
+        {%for key in columns if not columns[key].exclude_from_form %}
+        {% set item = columns[key] %}
+        {% if item.type == 'relation' %}
+        {% set fields = (item.identity | to_model).search_columns().values() | list %}
+        $("#{{key}}").select2({
+          allowClear: true,
+          ajax: {
+
+            url: "{{url_for((item.identity | to_model).datasource())}}",
+            dataType: 'json',
+            //delay: 250,
+            data: function (params) {
+              where = {
+                  or: [
+                    {%for col in fields%}
+                    {
+                      {{col}}: {
+                        contains: params.term
+                      }
+                    },
+                    {%endfor%}
+                  ]
+              }
+              //if(!isNaN(params.term)) where['or'].push({id:Number(params.term)});
+              //console.log(where)
+              return {
+                skip: (params.page|| 0) * 20,
+                limit: 20,
+                where: JSON.stringify(where)
+              };
+            },
+            processResults: function (data, params) {
+              return {
+                results: data.items,
+                pagination: {
+                  more: (params.page||0)*20 < data.total
+                }
+              };
+            },
+            cache: true
+          },
+          //placeholder: 'Search for a {{key}}',
+          //allowClear: true,
+          minimumInputLength: 0,
+          templateResult: function (item){
+            if(!item.id) return 'Search for a {{key}}'
+            return $(`{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
+          },
+          templateSelection: function (item) {
+            if(!item.id) return 'Search for a {{key}}'
+            if(item.text) return item.text;
+              return $(`{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
+            }
+
+        });
+        {%if value[key]%}
+             {%if item.many%}
+             whereclause={id: { in: {{value[key] | map(attribute="id") | list | safe}} } }
+             {%else %}
+             whereclause={id: {{value[key].id}} }
+             {%endif%}
+             $.ajax({
+                url: `{{url_for((item.identity | to_model).datasource())}}?where=${JSON.stringify(whereclause)}`,
+                dataType: 'json',
+              }).then(function (data) {
+                console.log("{{key}}", data.items);
+                for(item of data.items){
+                text = `{%for col in fields %} {{col}}: ${item['{{col}}']} {%endfor%}`;
+                var option = new Option(text, item.id, true, true);
+                $(option).data('raw', item);
+                $("#{{key}}").append(option).trigger('change');
+                $("#{{key}}").trigger({
+                    type: 'select2:select',
+                    params: {
+                        data: item
+                    }
+                });
+                }
+
+            });
+        {%endif%}
+        {% elif item.type == 'string' and item.enum %}
+        $("#{{key}}").select2();
+        {% elif item.type == 'string' and item.is_array %}
+        $("#{{key}}").select2();
+        {% elif item.type == 'json' %}
+          const jsonEditor{{ key| title}} = new JSONEditor(document.getElementById("{{key}}"), {
+          mode: 'form',
+          modes: ['code', 'form', 'tree'],
+          });
+          {% if value[key] %}
+          jsonEditor{{ key| title}}.set({{value[key] | tojson | safe}})
+          {% endif %}
+        {% elif item.type in ("image", "file") %}
+        $('#{{key}}').on("change", function(){
+          if($("#{{key}}").get(0).files.length>0){
+            $("#_keep_old_{{key}}").prop("checked", false);
+            $("#_keep_old_{{key}}").prop("disabled", true);
+          } else {
+            $("#_keep_old_{{key}}").prop("checked", true);
+            $("#_keep_old_{{key}}").prop("disabled", false);
+          }
+         });
+        {% endif %}
+        {% endfor %}
+        allFiles = []
+        $("form").submit(function (event) {
+            event.preventDefault();
+            $("#modal-loading").modal('toggle');
+            data = {}
+            {%for key in columns if not columns[key].exclude_from_form %}
+            {% set item = columns[key] %}
+            {% if item.type == 'json' %}
+            // prettier-ignore
+            data["{{key}}"] = JSON.stringify(jsonEditor{{ key | title }}.get());
+            {% elif item.type in ("image", "file") %}
+            // data["{{key}}"] = $("#{{key}}").filepond('getFiles').map((e) => e.file);
+            // console.log(document.querySelector("#{{key}} input").files[0])
+            // data["{{key}}"] = $("#{{key}} input").val();
+            for(file of $("#{{key}}").get(0).files)
+                allFiles.push({key:"{{key}}",value: file})
+            data["_keep_old_{{key}}"] = $("#_keep_old_{{key}}").is(":checked");
+            {% elif item.type in ("datetime","date","time") %}
+            if(moment($("#{{key}}").val()).isValid())
+            data["{{key}}"] = $("#{{key}}").val()
+            else data["{{key}}"] = null;
+            {% elif item.type == 'bool' %}
+            data["{{key}}"] = $("#{{key}}").is(":checked")
+            {%else%}
+            if(typeof $("#{{key}}").val() !== 'undefined' )
+            data["{{key}}"] = $("#{{key}}").val()
+            else  data["{{key}}"] = null;
+            {% endif %}
+            {% endfor %}
+            console.log(data);
+            console.log(allFiles);
+            var formData = new FormData();
+            for (key in data) {
+                if(data[key] !== null){
+                  if(Array.isArray(data[key]))
+                      data[key].forEach(item => { formData.append(key, item);});
+                  else 
+                  formData.append(key, data[key]);
+              }
+            }
+            for(file of allFiles)
+            formData.append(file.key,file.value)
+            
+            fetch("{{request.url | safe}}", {
+                method: "POST",
+                body: formData,
+            }).then(async response => {
+                if(!response.ok){
+                    // console.log(data.detail[0].msg);
+                    return Promise.reject(await response.json());
+                }
+                console.log('Created!', response);
+                $("#modal-loading").modal('toggle');
+                window.location.replace("{{admin_url_for(model) | safe}}")
+          
+            })
+                .catch(async (error) => {
+                console.log(error);
+                found_error = false
+                if(error.detail){
+                  if(Array.isArray(error.detail)){
+                    for (fastApiError of error.detail){
+                      $('#'+fastApiError.loc.slice(-1)).addClass('is-invalid')
+                      $('#'+fastApiError.loc.slice(-1)+'-error').text(fastApiError.msg)
+                      $('#'+fastApiError.loc.slice(-1)+'-error').show()
+                      found_error = true
+                    }
+                  }else error = error.detail
+                }else error = JSON.stringify(error,null,4)
+                await new Promise(r => setTimeout(r, 500));
+                $("#modal-loading").modal('toggle');
+                if(!found_error){
+                  $("#modal-error").modal('toggle');
+                  $("#error-body").text(error)
+                }
+            });
+        });
+  });
+</script>
+{%endblock%}
