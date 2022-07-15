@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import json
 from typing import Any, Dict, List
+from fastapi import Request
 
 from loguru import logger
 
@@ -29,23 +30,38 @@ from fastapi.datastructures import FormData
 
 class AdminModel(BaseModel):
     def identity(self) -> str:
-        return slugify_class_name(__class__.__name__)
+        return slugify_class_name(self.__class__.__name__)
 
+    @abstractmethod
     def get_name(self) -> str:
-        return __class__.__name__
+        raise NotImplemented
+
+    @abstractmethod
+    def pk(self) -> str:
+        pass
 
     @abstractmethod
     def datasource(self) -> str:
+        pass
+
+    def can_view(self, request: Request) -> bool:
+        pass
+
+    def can_edit(self, request: Request) -> bool:
+        pass
+
+    def can_create(self, request: Request) -> bool:
         pass
 
     def _export_columns(self) -> List[int]:
         return list(
             range(
                 2,
-                2+len(
+                2
+                + len(
                     list(
                         filter(
-                            lambda f:not  getattr(self, f.name).exclude_from_list,
+                            lambda f: not getattr(self, f.name).exclude_from_list,
                             self.__fields__.values(),
                         )
                     )
@@ -79,10 +95,14 @@ class AdminModel(BaseModel):
 
         return columns
 
-    def _extract_fields(self, form_data: FormData) -> Dict[str, Any]:
+    def _extract_fields(
+        self, form_data: FormData, is_edit: bool = False
+    ) -> Dict[str, Any]:
         data = dict()
         for field in self.__fields__.values():
-            if not getattr(self, field.name).exclude_from_form:
+            if (is_edit and not getattr(self, field.name).exclude_from_edit) or (
+                not is_edit and not getattr(self, field.name).exclude_from_create
+            ):
                 if (
                     field.type_ in [NumberField, EmailField, PhoneField]
                     and form_data.get(field.name) == ""

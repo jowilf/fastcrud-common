@@ -228,7 +228,7 @@
       data: null,
       orderable: false,
       render: function (data, type, full, meta) {
-        return `<input data-id="${full.id}" class="form-check-input" type="checkbox">`;
+        return `<input data-id="${full.DT_RowId}" class="form-check-input" type="checkbox">`;
       }
     })
     columns.push({
@@ -238,10 +238,10 @@
         // return '<a href="#"><i class="fa-solid fa-eye"></i></a>'
         return `
         <div class="d-flex">
-        <a href="{{ admin_url_for(model, 'show')}}&id=${full.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View">
+        <a href="{{ admin_url_for(model, 'show', '${full.DT_RowId}')}}" data-bs-toggle="tooltip" data-bs-placement="top" title="View">
                 <span class="me-1"><i class="fa-solid fa-eye"></i></span>
           </a>
-          <a href="{{ admin_url_for(model, 'edit') }}&id=${full.id}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
+          <a href="{{ admin_url_for(model, 'edit', '${full.DT_RowId}') }}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
                 <span class="me-1"><i class="fa-solid fa-edit"></i></span>
           </a><div>
         `;
@@ -259,9 +259,10 @@
               cols = "";
               if(data.length == 0 ) return empty_column();
               data.forEach((e) => {
-                cols += `<div class="p-1"><img style="width: 3em;height:3em;object-fit: cover;"  src="{{request.base_url}}medias/${e.path}" class="img-fluid rounded" alt="${e.filename}"></div>`;
+                cols+=`<div class="p-1"><span class="avatar avatar-sm" style="background-image: url({{file_url('${e.path}')}})"></span></div>`;
+                //cols += `<div class="p-1"><img style="width: 3em;height:3em;object-fit: cover;"  src="{{request.base_url}}medias/${e.path}" class="img-fluid rounded" alt="${e.filename}"></div>`;
               });
-              return `<div class="d-flex" style="min-width: ${ 4 * data.length }em;">${cols}</div>`;
+              return `<div class="d-flex">${cols}</div>`;
             } else return null_column();
           },
         });
@@ -274,8 +275,8 @@
               cols = "";
               if(data.length == 0 ) return empty_column();
               data.forEach((e) => {
-                cols += `<a href="{{request.base_url}}medias/${ e.path }" class="btn-link">
-                  <i class="fa-solid fa-fw ${get_file_icon( e.content_type )}"></i><span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title="${e.filename}" style="max-width: 150px;">${e.filename}</span></a>`;
+                cols += `<a href="{{file_url('${e.path}')}}" class="btn-link">
+                  <i class="fa-solid fa-fw ${get_file_icon( e.content_type )}"></i><span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title="${e.filename}" style="max-width: 200px;">${e.filename}</span></a>`;
               });
               return `<div class="d-flex flex-column">${cols}</div>`;
             } else return null_column();
@@ -286,7 +287,7 @@
           data: "{{key}}",
           render: function (data, type, full, meta) {
             if (data) {
-              return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+              return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 200px;">${pretty_print_json(
                 data
               )}</span>`;
             } else return null_column();
@@ -301,11 +302,11 @@
               if (Array.isArray(data)) {
               if(data.length == 0 ) return empty_column();
                 data = data.map((e) => moment(e).format("{{'LLLL' if (item.type == 'datetime') else( 'LL' if (item.type == 'date') else 'LTS' )}}"));
-                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 200px;">${pretty_print_json(
                   data
                 )}</span>`;
               } else {
-                data = moment(data).format("{{'LLLL' if (item.type == 'datetime') else( 'LL' if (item.type == 'date') else 'LTS' )}}");
+                data = moment(data{{(", 'HH:mm:ss'" if item.type =='time' else "") |safe}}).format("{{'LLLL' if (item.type == 'datetime') else( 'LL' if (item.type == 'date') else 'LTS' )}}");
                 return `<span>${data}</span>`;
               }
             } else return null_column();
@@ -338,6 +339,7 @@
           },
         });
     {%elif item.type == "relation"%}
+    {%set foreign_model = (item.identity | to_model)%}
     columns.push({
           data: "{{key}}",
           orderable: false,
@@ -347,11 +349,11 @@
                   if(data.length == 0 ) return empty_column();
                   cols = "";
                   data.forEach((e) => {
-                      cols += `<a class='mx-1 btn-link' href="{{ admin_url_for(item.identity | to_model, 'show') }}&id=${e.id}"><span class='avatar rounded-circle'>${e.id}</span></a>`;
+                      cols += `<a class='mx-1 btn-link' href="{{ admin_url_for(foreign_model, 'show', '${e.'+foreign_model.pk()+'}') }}"><span class='avatar rounded-circle'>${e.{{foreign_model.pk()}}}</span></a>`;
                 });
                 return `<div class="d-flex flex-row">${cols}</div>`;
               }
-              return `<a class='btn-link' href="{{ admin_url_for(item.identity | to_model, 'show') }}&id=${data.id}"><span class='avatar rounded-circle'>${data.id}</span></a>`;
+              return `<a class='btn-link' href="{{ admin_url_for(foreign_model, 'show', '${data.'+foreign_model.pk()+'}') }}"><span class='avatar rounded-circle'>${data.{{foreign_model.pk()}}}</span></a>`;
             } else return null_column();
           },
         });
@@ -362,10 +364,10 @@
             if (data) {
               if (Array.isArray(data)) {
                 if(data.length == 0 ) return empty_column();
-                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 150px;">${pretty_print_json(
+                return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${JSON.stringify(data)}' style="max-width: 200px;">${pretty_print_json(
                   data
                 )}</span>`;
-              } else return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${data}' style="max-width: 150px;">${data}</span>`;
+              } else return `<span class="align-middle d-inline-block text-truncate" data-toggle="tooltip" data-placement="bottom" title='${data}' style="max-width: 200px;">${data}</span>`;
             } else return null_column();
           },
         });
@@ -397,6 +399,7 @@
             className: ''
         },
       buttons: [
+        {%if export_config.csv %}
         {
           extend: "csv",
           text: '<i class="fa-solid fa-file-csv"></i> CSV',
@@ -404,6 +407,8 @@
             columns: {{model._export_columns()}}
           }
         },
+        {% endif %}
+        {%if export_config.excel %}
         {
           extend: "excel",
           text: '<i class="fa-solid fa-file-excel"></i> Excel',
@@ -411,6 +416,8 @@
             columns: {{model._export_columns()}}
           }
         },
+        {% endif %}
+        {%if export_config.pdf %}
         {
           extend: "pdf",
           text: '<i class="fa-solid fa-file-pdf"></i> PDF',
@@ -418,6 +425,8 @@
             columns:{{model._export_columns()}}
           }
         },
+        {% endif %}
+        {%if export_config.print %}
         {
           extend: "print",
           text: '<i class="fa-solid fa-print"></i> Print',
@@ -425,10 +434,14 @@
             columns: {{model._export_columns()}}
           }
         },
+        {% endif %}
+        {%if export_config.column_visibility %}
         {
           extend: "colvis",
           text: 'Column visibility <i class="fa-solid fa-caret-down"></i>',
         },
+        {% endif %}
+        {%if export_config.search_builder %}
         {
           extend: "searchBuilder",
           text: '<i class="fa-solid fa-filter"></i> Filter',
@@ -438,6 +451,7 @@
             greyscale: true,
           },
         },
+        {% endif %}
       ],
       language: {
         info: "Showing <strong>_START_</strong> to <strong>_END_</strong> off <strong>_TOTAL_</strong> records",
@@ -515,7 +529,7 @@
           console.log(where);
         }
         $.ajax({
-          url: "{{ url_for(model.datasource())}}",
+          url: "{{ ds(model)}}",
           type: "get",
           data: {
             skip: settings._iDisplayStart,
@@ -529,7 +543,7 @@
             total = data.total;
             data = data.items;
             data.forEach((d) => {
-              d.DT_RowId = d.id;
+              d.DT_RowId = d.{{model.pk()}};
             });
             callback({
               recordsFiltered:total,
@@ -572,8 +586,8 @@
       $("#modal-delete-btn").click(function(){
         $("#modal-delete").modal('hide');
         $("#modal-loading").modal('show');
-        var where = JSON.stringify({id: { in: table.rows( { selected: true } ).ids().toArray()}})
-        fetch(`{{ url_for(model.datasource())}}?where=${where}`, {
+        var where = JSON.stringify({{'{'+model.pk()}}: { in: table.rows( { selected: true } ).ids().toArray()}})
+        fetch(`{{ ds(model)}}?where=${where}`, {
                     method: "DELETE"
                 }).then(async response=>{
                   if(response.ok){

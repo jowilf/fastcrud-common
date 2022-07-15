@@ -10,7 +10,8 @@ class BaseField(BaseModel):
     is_array: Optional[bool] = False
     exclude_from_view: Optional[bool] = False
     exclude_from_list: Optional[bool] = False
-    exclude_from_form: Optional[bool] = False
+    exclude_from_create: Optional[bool] = False
+    exclude_from_edit: Optional[bool] = False
 
 
 class NumberField(BaseField):
@@ -65,6 +66,7 @@ class JSONField(BaseField):
 class FileField(BaseField):
     type: str = "file"
 
+
 class ImageField(FileField):
     type: str = "image"
 
@@ -73,6 +75,7 @@ class PasswordField(StringField):
     type: str = "password"
     exclude_from_view: bool = True
     exclude_from_list: bool = True
+    exclude_from_edit: bool = True
     min_length: int = 8
     max_length: int = 20
     has_uppercase: bool = True

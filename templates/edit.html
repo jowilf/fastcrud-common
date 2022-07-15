@@ -1,4 +1,5 @@
 {% extends "layout.html" %} 
+{%set pk = model.pk()%}
 {%set columns= model.dict() %}
 {% block header %}
 <div class="d-flex justify-content-between align-items-center">
@@ -27,11 +28,11 @@
             </div>
           </div>
           <div class="card-body border-bottom py-3">
-            {%for key in columns if not columns[key].exclude_from_form %} 
+            {%for key in columns if not columns[key].exclude_from_edit %} 
             {%set item = columns[key] %}
 
             <div class="mb-3">
-              <label class="form-label" for="{{key}}">{{key|title}}</label>
+              <label class="form-label" for="{{key}}">{{key|field_title}}</label>
               {%if item.type == "string" and item.multiline%}
               <textarea
                 id="{{key}}"
@@ -68,7 +69,7 @@
                 class="form-control"
                 placeholder="{{key | title}}"
                 autocomplete="off"
-                value="{{value[key]}}"
+                value="{{value[key] if value[key] else '' }}"
                 {%if
                 item.required%}required{%endif%}
               />
@@ -78,7 +79,7 @@
                 type="email"
                 class="form-control"
                 placeholder="{{key | title}}"
-                value="{{value[key]}}"
+                value="{{value[key] if value[key] else '' }}"
                 {%if
                 item.required%}required{%endif%}
               />
@@ -89,7 +90,7 @@
                 type="text"
                 class="form-control"
                 placeholder="{{key | title}}"
-                value="{{value[key]}}"
+                value="{{value[key] if value[key] else '' }}"
                 {%if
                 item.required%}required{%endif%}
               />
@@ -100,7 +101,7 @@
                 type="number"
                 class="form-control"
                 placeholder="{{key | title}}"
-                value="{{value[key]}}"
+                value="{{value[key] if value[key] else '' }}"
                 {%if
                 item.required%}required{%endif%}
               />
@@ -239,15 +240,16 @@
 {%endblock%} {%block script_end%}
 <script>
     $(function () {
-        {%for key in columns if not columns[key].exclude_from_form %}
+        {%for key in columns if not columns[key].exclude_from_edit %}
         {% set item = columns[key] %}
         {% if item.type == 'relation' %}
-        {% set fields = (item.identity | to_model).search_columns().values() | list %}
+        {% set foreign_model = (columns[key].identity | to_model) %}
+        {% set fields = foreign_model.search_columns().values() | list %}
         $("#{{key}}").select2({
           allowClear: true,
           ajax: {
 
-            url: "{{url_for((item.identity | to_model).datasource())}}",
+            url: "{{ds(foreign_model)}}",
             dataType: 'json',
             //delay: 250,
             data: function (params) {
@@ -262,8 +264,6 @@
                     {%endfor%}
                   ]
               }
-              //if(!isNaN(params.term)) where['or'].push({id:Number(params.term)});
-              //console.log(where)
               return {
                 skip: (params.page|| 0) * 20,
                 limit: 20,
@@ -272,7 +272,10 @@
             },
             processResults: function (data, params) {
               return {
-                results: data.items,
+                results: $.map(data.items, function(obj){
+                  obj.id = obj.id || obj.{{pk}};
+                  return obj;
+                }),
                 pagination: {
                   more: (params.page||0)*20 < data.total
                 }
@@ -284,11 +287,11 @@
           //allowClear: true,
           minimumInputLength: 0,
           templateResult: function (item){
-            if(!item.id) return 'Search for a {{key}}'
+            if(!item.{{pk}}) return 'Search for a {{key}}'
             return $(`{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
           },
           templateSelection: function (item) {
-            if(!item.id) return 'Search for a {{key}}'
+            if(!item.{{pk}}) return 'Search for a {{key}}'
             if(item.text) return item.text;
               return $(`{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
             }
@@ -296,18 +299,18 @@
         });
         {%if value[key]%}
              {%if item.many%}
-             whereclause={id: { in: {{value[key] | map(attribute="id") | list | safe}} } }
+             whereclause={{'{'+pk}}: { in: {{value[key] | map(attribute=foreign_model.pk()) | list | safe}} } }
              {%else %}
-             whereclause={id: {{value[key].id}} }
+             whereclause={{'{'+pk}}: {{value[key][foreign_model.pk()] }} }
              {%endif%}
              $.ajax({
-                url: `{{url_for((item.identity | to_model).datasource())}}?where=${JSON.stringify(whereclause)}`,
+                url: `{{ds(foreign_model)}}?where=${JSON.stringify(whereclause)}`,
                 dataType: 'json',
               }).then(function (data) {
                 console.log("{{key}}", data.items);
                 for(item of data.items){
                 text = `{%for col in fields %} {{col}}: ${item['{{col}}']} {%endfor%}`;
-                var option = new Option(text, item.id, true, true);
+                var option = new Option(text, item.{{foreign_model.pk()}}, true, true);
                 $(option).data('raw', item);
                 $("#{{key}}").append(option).trigger('change');
                 $("#{{key}}").trigger({
@@ -349,7 +352,7 @@
             event.preventDefault();
             $("#modal-loading").modal('toggle');
             data = {}
-            {%for key in columns if not columns[key].exclude_from_form %}
+            {%for key in columns if not columns[key].exclude_from_edit %}
             {% set item = columns[key] %}
             {% if item.type == 'json' %}
             // prettier-ignore

@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{%set pk = model.pk()%}
 {%set columns= model.dict() %}
 {% block header %}
 <div class="d-flex justify-content-between align-items-center">
@@ -29,11 +30,11 @@
           <div class="card-body border-bottom py-3">
 
 
-            {%for key in columns if not columns[key].exclude_from_form %}
+            {%for key in columns if not columns[key].exclude_from_create %}
             {%set item = columns[key] %}
 
             <div class="mb-3">
-              <label class="form-label" for="{{key}}">{{key|title}}</label>
+              <label class="form-label" for="{{key}}">{{key|field_title}}</label>
               {%if item.type == "string" and item.multiline%}
               <textarea
                 id="{{key}}"
@@ -248,14 +249,15 @@
 {%endblock%} {%block script_end%}
 <script>
     $(function () {
-        {%for key in columns if not columns[key].exclude_from_form %}
+        {%for key in columns if not columns[key].exclude_from_create %}
         {% set item = columns[key] %}
         {% if item.type == 'relation' %}
-        {% set fields = (item.identity | to_model).search_columns().values() | list %}
+        {% set foreign_model = (columns[key].identity | to_model) %}
+        {% set fields = foreign_model.search_columns().values() | list %}
         $("#{{key}}").select2({
           allowClear: true,
           ajax: {
-            url: "{{url_for((item.identity | to_model).datasource())}}",
+            url: "{{ds(foreign_model)}}",
             dataType: 'json',
             //delay: 250,
             data: function (params) {
@@ -270,8 +272,6 @@
                     {%endfor%}
                   ]
               }
-              //if(!isNaN(params.term)) where['or'].push({id:Number(params.term)});
-              //console.log(where)
               return {
                 skip: (params.page|| 0) * 20,
                 limit: 20,
@@ -280,7 +280,10 @@
             },
             processResults: function (data, params) {
               return {
-                results: data.items,
+                results: $.map(data.items, function(obj){
+                  obj.id = obj.id || obj.{{pk}};
+                  return obj;
+                }),
                 pagination: {
                   more: (params.page||0)*20 < data.total
                 }
@@ -292,11 +295,11 @@
           //allowClear: true,
           minimumInputLength: 0,
           templateResult: function (item){
-            if(!item.id) return 'Search for a {{key}}'
+            if(!item.{{pk}}) return 'Search for a {{key}}'
             return $(`<span>{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
           },
           templateSelection: function (item) {
-            if(!item.id) return 'Search for a {{key}}'
+            if(!item.{{pk}}) return 'Search for a {{key}}'
               return $(`<span>{%for col in fields %}<strong>{{col}}: </strong>${item['{{col}}']} {%endfor%}</span>`);
             }
 
@@ -319,7 +322,7 @@
         event.preventDefault();
         $("#modal-loading").modal('toggle');
         data = {}
-        {%for key in columns if not columns[key].exclude_from_form %}
+        {%for key in columns if not columns[key].exclude_from_create %}
         $("#{{key}}").removeClass('is-invalid')
         $("#{{key}}-error").hide()
         {% set item = columns[key] %}
