@@ -1,0 +1,25 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "jowilf",
+      "name": "Jocelin Hounon",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31705179?v=4",
+      "profile": "https://github.com/jowilf",
+      "contributions": [
+        "maintenance"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "fastcrud-common",
+  "projectOwner": "jowilf"
+}
