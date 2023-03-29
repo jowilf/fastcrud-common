@@ -1,2 +1,2 @@
 # fastcrud-common
-Fastcrud utilities
+Fastcrud utilities edit
